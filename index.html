@@ -215,8 +215,30 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 
 @media (max-width: 860px){
   #drawer{width:230px;}
-  #terminal{width:260px;}
-  .hint{display:none;}
+  #drawer[data-open="true"]{width:min(300px, calc(100vw - 24px));}
+}
+
+/* celular: empilha e encolhe tudo que era pensado pra tela grande */
+@media (max-width: 600px){
+  #top-left{max-width:calc(100vw - 24px);}
+  .brand{padding:10px 14px 10px 10px;gap:10px;}
+  .brand .logo-chip{padding:6px 9px;}
+  .brand .logo-chip img{height:30px;}
+  .brand .eyebrow{font-size:10px;letter-spacing:.04em;}
+  .brand h1{font-size:16px;}
+  .brand .sub{font-size:12px;}
+  #top-right{grid-template-columns:1fr 1fr;gap:6px;}
+  #top-right .btn{font-size:10.5px;padding:8px 6px;text-align:center;}
+  .mission-pill{left:12px;padding:6px 12px 6px 8px;}
+  .mission-pill .label, .mission-pill .metric{font-size:10.5px;}
+  #terminal{left:12px;width:calc(100vw - 24px);height:120px;}
+  #pov-frame, #pov-label{left:12px !important;}
+  #controls{gap:6px;}
+  #controls .btn{font-size:10.5px;padding:9px 12px;}
+  #btn-start{font-size:12px !important;padding:11px 16px !important;}
+  .about-inner, .docs-tab{font-size:12px;}
+  .docs-tabs{padding:12px 10px 0;}
+  .docs-body{padding:16px 14px;}
 }
 
 #about-panel{
@@ -260,7 +282,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
   50%{box-shadow:0 0 0 9999px rgba(8,10,11,0.80), 0 0 0 4px var(--amber), 0 0 26px 6px rgba(226,162,59,0.9);}
 }
 #tutorial-callout{
-  position:fixed;width:280px;background:var(--surface);border:1px solid var(--amber-dim);
+  position:fixed;width:min(280px, calc(100vw - 24px));background:var(--surface);border:1px solid var(--amber-dim);
   border-radius:8px;padding:16px 18px;z-index:71;
   transition:left .35s ease, top .35s ease;
   box-shadow:0 8px 24px rgba(0,0,0,0.4);
@@ -3226,7 +3248,10 @@ const povCam = new THREE.PerspectiveCamera(80, 1, 0.03, 6);
 povCam.rotation.order = 'YXZ'; // yaw (rumo do robo) primeiro, depois pitch (inclinacao) local
 const POV_PITCH = -0.26; // inclina a camera pra baixo pra enxergar o chao e os obstaculos
 const POV_HEIGHT = 0.075; // um pouco mais alta que o sensor de verdade, so pra dar visao util
-const povSize = 260;
+// no celular a tela e mais estreita que os 260px fixos - encolhe proporcional
+function computePovSize() { return Math.min(260, innerWidth * 0.42, innerHeight * 0.28); }
+let povSize = computePovSize();
+addEventListener('resize', () => { povSize = computePovSize(); });
 const povFrame = document.createElement('div');
 povFrame.id = 'pov-frame';
 document.body.appendChild(povFrame);
@@ -3358,13 +3383,16 @@ addEventListener('resize', () => {
 /* =====================================================================
  * Tutorial guiado - destaque nos elementos + demonstracao animada
  * =================================================================== */
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const TUTORIAL_STEPS = [
   { target: null, title: 'Objetivo da missão', text: 'Alcançar autonomamente um ponto fixo a 3m do início, em linha reta, mesmo com obstáculos no percurso. Paradigma híbrido deliberativo-reativo: planejamento de rota combinado com reação em tempo real aos sensores. Essa simulação roda a lógica real do código-fonte do Arduino.' },
   { target: null, title: 'Nota técnica: arquitetura híbrida', text: 'Modelo AuRA: a camada deliberativa (planejamento hierárquico) recalcula a distância até o alvo fixo a cada ciclo; a reativa (subsunção) suprime o comando do planejador ao detectar obstáculo próximo. O ângulo de retorno após o desvio é recalculado pela posição real via odometria, não pela reversão do giro, garantindo convergência ao alvo independente do número de desvios. Um watchdog por contagem de pulsos garante o encerramento da missão.' },
   { target: '#tour-frame', title: 'O robô', text: 'O carrinho tem uns 20cm de comprimento, bem menor que uma pessoa:', robotTour: true },
   { target: '#btn-start', title: 'Comece a missão', text: 'Aperte aqui pra o robô começar a andar rumo ao alvo. Ele não anda sozinho, só depois que você iniciar.' },
   { target: '#viewport', title: 'Coloque obstáculos', text: 'Clique em qualquer lugar do chão pra derrubar um obstáculo aleatório (tijolo, cone, caixa, pedra ou bola) na frente do robô. Olha só:', demo: true },
-  { target: '#viewport', title: 'Mexa na câmera', text: 'Botão esquerdo + arrastar gira a câmera; botão direito (ou Ctrl+arrastar) desloca; scroll dá zoom. Observa:', orbit: true },
+  { target: '#viewport', title: 'Mexa na câmera', text: IS_TOUCH
+    ? 'Um dedo arrasta gira a câmera; dois dedos arrasta desloca; pinça dá zoom. Observa:'
+    : 'Botão esquerdo + arrastar gira a câmera; botão direito (ou Ctrl+arrastar) desloca; scroll dá zoom. Observa:', orbit: true },
   { target: '#pov-frame', title: 'Visão em primeira pessoa', text: 'Essa é a câmera simulada do sensor ultrassônico frontal, mostra o que o robô estaria "vendo" pela frente, em tempo real.' },
   { target: '#drawer', title: 'Componentes do robô', text: 'Clique direto numa peça do robô, na cena 3D (ou na lista aqui do lado), pra ver o que ela faz e que informação processa. Repara:', robotPart: true },
   { target: '#terminal', title: 'Monitor Serial simulado', text: 'O mesmo tipo de log que o Arduino real mostraria: mudança de estado, leitura dos sensores, distância restante.' },
@@ -3399,7 +3427,7 @@ let orbitDemoRunning = false;
 let obstacleDemoTimer = null;
 
 function runObstacleDemo() {
-  tutorialCursor.textContent = '🖱️';
+  tutorialCursor.textContent = IS_TOUCH ? '👆' : '🖱️';
   tutorialCursor.classList.add('active');
   const pts = [[0.16, 0.80], [-0.20, 1.15]];
   let i = 0;
@@ -3469,7 +3497,7 @@ function runOrbitDemo() {
 }
 
 function runZoomDemo() {
-  tutorialCursor.textContent = '🖱️';
+  tutorialCursor.textContent = IS_TOUCH ? '👆' : '🖱️';
   const cx = innerWidth * 0.5, cy = innerHeight * 0.5;
   tutorialCursor.style.left = cx + 'px'; tutorialCursor.style.top = cy + 'px';
   setCursorLabel('role o scroll pra dar zoom', cx, cy);
@@ -3512,7 +3540,7 @@ function runDocsDemo() {
   const el = document.getElementById('btn-docs');
   const r = el.getBoundingClientRect();
   const sx = r.left + r.width / 2, sy = r.top + r.height / 2;
-  tutorialCursor.textContent = '🖱️';
+  tutorialCursor.textContent = IS_TOUCH ? '👆' : '🖱️';
   tutorialCursor.classList.add('active');
   tutorialCursor.style.left = sx + 'px'; tutorialCursor.style.top = sy + 'px';
   setCursorLabel('clique aqui', sx, sy);
@@ -3529,7 +3557,7 @@ function runRobotPartDemo() {
   const pos = getPartWorldPosition('arduino');
   if (!pos) return;
   const s = worldToScreen(pos.x, pos.y + 0.02, pos.z);
-  tutorialCursor.textContent = '🖱️';
+  tutorialCursor.textContent = IS_TOUCH ? '👆' : '🖱️';
   tutorialCursor.classList.add('active');
   tutorialCursor.style.left = s.x + 'px'; tutorialCursor.style.top = s.y + 'px';
   setCursorLabel('clique nessa peça', s.x, s.y);
@@ -3579,7 +3607,7 @@ function showTutorialStep(i) {
       tutorialSpotlight.style.top = (r.top - pad) + 'px';
       tutorialSpotlight.style.width = (r.width + pad * 2) + 'px';
       tutorialSpotlight.style.height = (r.height + pad * 2) + 'px';
-      const GAP = 32, CW = 296, CH = 170;
+      const GAP = 32, CW = Math.min(296, innerWidth - 24), CH = 190;
       let cx = r.left, cy = r.bottom + GAP;
       if (step.target === '#viewport') {
         // alvo e a tela toda (so pra escurecer o fundo) - a demonstracao de
